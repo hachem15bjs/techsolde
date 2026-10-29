@@ -1,0 +1,353 @@
+{
+  "info": {
+    "_postman_id": "74b537ab-6e86-49d5-9381-0526d071e503",
+    "name": "TechSolde Promotion Service",
+    "description": "Local CRUD verification for the Promotion Service. Uses collection variables to create, read, update, and delete temporary promotion and coupon records. The API is unauthenticated for local coursework demonstration only.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5003/api" },
+    { "key": "promotionId", "value": "" },
+    { "key": "promotionCode", "value": "" },
+    { "key": "couponId", "value": "" },
+    { "key": "couponCode", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health and statistics",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API and MongoDB are connected', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.database).to.eql('connected');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/promotions/stats"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statistics endpoint returns all dashboard counts', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const data = pm.response.json().data;",
+                  "  ['totalPromotions', 'activePromotions', 'expiredPromotions', 'upcomingPromotions', 'totalCoupons', 'availableCoupons'].forEach(function (key) {",
+                  "    pm.expect(data).to.have.property(key);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Promotion CRUD",
+      "item": [
+        {
+          "name": "1. Create promotion",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString();",
+                  "const start = new Date(Date.now() + 86400000);",
+                  "const end = new Date(Date.now() + 30 * 86400000);",
+                  "pm.collectionVariables.set('promotionCode', 'POSTMAN' + stamp.slice(-10));",
+                  "pm.collectionVariables.set('promotionStartDate', start.toISOString());",
+                  "pm.collectionVariables.set('promotionEndDate', end.toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion created and code normalized', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.code).to.eql(pm.collectionVariables.get('promotionCode'));",
+                  "  pm.collectionVariables.set('promotionId', data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman CRUD verification\",\n  \"description\": \"Temporary demonstration promotion created by the Postman collection.\",\n  \"code\": \"{{promotionCode}}\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 10,\n  \"startDate\": \"{{promotionStartDate}}\",\n  \"endDate\": \"{{promotionEndDate}}\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/promotions"
+          }
+        },
+        {
+          "name": "2. List promotions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion list returns pagination metadata', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().meta).to.have.property('totalItems');",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/promotions?search={{promotionCode}}&page=1&limit=10&sort=desc"
+          }
+        },
+        {
+          "name": "3. Read created promotion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created promotion can be read by ID', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('promotionId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/promotions/{{promotionId}}"
+          }
+        },
+        {
+          "name": "4. Update promotion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion discount updated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.discountValue).to.eql(15);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discountValue\": 15\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/promotions/{{promotionId}}"
+          }
+        },
+        {
+          "name": "5. Delete promotion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion deleted', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().message).to.include('deleted');",
+                  "  pm.collectionVariables.unset('promotionId');",
+                  "  pm.collectionVariables.unset('promotionCode');",
+                "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/promotions/{{promotionId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupon CRUD",
+      "item": [
+        {
+          "name": "1. Create coupon",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('couponCode', 'POSTMAN' + Date.now().toString().slice(-10));",
+                  "pm.collectionVariables.set('couponExpirationDate', new Date(Date.now() + 365 * 86400000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Coupon created and code normalized', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.code).to.eql(pm.collectionVariables.get('couponCode'));",
+                  "  pm.collectionVariables.set('couponId', data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{couponCode}}\",\n  \"description\": \"Temporary demonstration coupon created by the Postman collection.\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 10,\n  \"usageLimit\": 50,\n  \"usedCount\": 0,\n  \"expirationDate\": \"{{couponExpirationDate}}\",\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/coupons"
+          }
+        },
+        {
+          "name": "2. List coupons",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Coupon list returns pagination metadata', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().meta).to.have.property('totalItems');",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/coupons?search={{couponCode}}&page=1&limit=10&sort=desc"
+          }
+        },
+        {
+          "name": "3. Read created coupon",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created coupon can be read by ID', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data._id).to.eql(pm.collectionVariables.get('couponId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/coupons/{{couponId}}"
+          }
+        },
+        {
+          "name": "4. Update coupon",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Coupon discount updated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.discountValue).to.eql(20);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discountValue\": 20\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/coupons/{{couponId}}"
+          }
+        },
+        {
+          "name": "5. Delete coupon",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Coupon deleted', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().message).to.include('deleted');",
+                  "  pm.collectionVariables.unset('couponId');",
+                  "  pm.collectionVariables.unset('couponCode');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/coupons/{{couponId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
