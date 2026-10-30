@@ -1,0 +1,744 @@
+{
+  "info": {
+    "_postman_id": "2abab58c-478c-51e0-938e-1203527de6ce",
+    "name": "TechSolde Alert Service",
+    "description": "CRUD, status workflow, filters, statistics and automatic detection for the Alert Service (port 5004). The detection folder creates and deletes a temporary [DEMO] promotion through the Promotion Service (port 5003). Run the folders in order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "alertId",
+      "value": ""
+    },
+    {
+      "key": "detectedAlertId",
+      "value": ""
+    },
+    {
+      "key": "demoPromotionId",
+      "value": ""
+    },
+    {
+      "key": "demoCode",
+      "value": ""
+    },
+    {
+      "key": "demoStart",
+      "value": ""
+    },
+    {
+      "key": "demoEnd",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health, statistics and rules",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API and MongoDB are connected', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.database).to.eql('connected');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/health"
+          }
+        },
+        {
+          "name": "Alert statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statistics come back as numbers', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.total).to.be.a('number');",
+                  "  pm.expect(data.byType).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/stats"
+          }
+        },
+        {
+          "name": "Detection status and rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Five detection rules are listed', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.rules).to.have.length(5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/scan/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Manual alert CRUD and status",
+      "item": [
+        {
+          "name": "1. Create manual alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Alert created (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.status).to.eql('new');",
+                  "  pm.expect(data.source).to.eql('manual');",
+                  "  pm.collectionVariables.set('alertId', data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{alertBaseUrl}}/alerts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Review unusually high discounts before the seasonal sale\",\n  \"description\": \"Postman demonstration alert.\",\n  \"severity\": \"high\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2. List alerts (critical first)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('List with pagination meta', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().meta.totalItems).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts?sort=severity&page=1&limit=10"
+          }
+        },
+        {
+          "name": "3. Search and filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Search finds the manual alert', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().data.map((alert) => alert._id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('alertId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts?search=seasonal&severity=high&status=new&type=custom"
+          }
+        },
+        {
+          "name": "4. Read one alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Alert found', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}"
+          }
+        },
+        {
+          "name": "5. Update alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Severity updated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.severity).to.eql('critical');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"severity\": \"critical\",\n  \"notes\": \"Edited from Postman.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "6. Acknowledge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is acknowledged', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.status).to.eql('acknowledged');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}/acknowledge"
+          }
+        },
+        {
+          "name": "7. Resolve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is resolved', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.status).to.eql('resolved');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}/resolve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Discounts reviewed with marketing.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "8. Reopen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is new again', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.status).to.eql('new');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}/reopen"
+          }
+        },
+        {
+          "name": "9. Delete alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Alert deleted', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}"
+          }
+        },
+        {
+          "name": "10. Read deleted alert (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Deleted alert is gone', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{alertId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Automatic detection demo",
+      "item": [
+        {
+          "name": "1. Create a promotion that expires in 8 hours (Promotion Service)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now().toString().slice(-8);",
+                  "pm.collectionVariables.set('demoCode', 'POSTMANFLASH' + stamp);",
+                  "pm.collectionVariables.set('demoStart', new Date(Date.now() - 86400000).toISOString());",
+                  "pm.collectionVariables.set('demoEnd', new Date(Date.now() + 8 * 3600000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.collectionVariables.set('demoPromotionId', pm.response.json().data._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{promotionBaseUrl}}/promotions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"[DEMO] Postman Flash Sale\",\n  \"description\": \"Temporary demonstration promotion.\",\n  \"code\": \"{{demoCode}}\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 20,\n  \"startDate\": \"{{demoStart}}\",\n  \"endDate\": \"{{demoEnd}}\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2. Scan now",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Scan succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().data.status).to.eql('success');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/scan"
+          }
+        },
+        {
+          "name": "3. Find the detected expiration alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Exactly one open alert for the promotion', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.meta.totalItems).to.eql(1);",
+                  "  pm.expect(body.data[0].title).to.include('expires in');",
+                  "  pm.collectionVariables.set('detectedAlertId', body.data[0]._id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts?type=promotion_expiring&search={{demoCode}}"
+          }
+        },
+        {
+          "name": "4. Scan again (no duplicates)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Second scan succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/scan"
+          }
+        },
+        {
+          "name": "5. Still exactly one alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No duplicate alert was created', function () {",
+                  "  pm.expect(pm.response.json().meta.totalItems).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts?type=promotion_expiring&search={{demoCode}}"
+          }
+        },
+        {
+          "name": "6. Editing detection fields is refused (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Automatic alerts only accept notes', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{alertBaseUrl}}/alerts/{{detectedAlertId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Changed by hand\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "7. Delete the demo promotion (Promotion Service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Promotion deleted', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{promotionBaseUrl}}/promotions/{{demoPromotionId}}"
+          }
+        },
+        {
+          "name": "8. Scan after the promotion is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Scan succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/scan"
+          }
+        },
+        {
+          "name": "9. Alert was auto-resolved",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Condition disappeared, alert auto-resolved', function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.status).to.eql('resolved');",
+                  "  pm.expect(data.autoResolved).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{detectedAlertId}}"
+          }
+        },
+        {
+          "name": "10. Clean up the detected alert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Alert deleted', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/{{detectedAlertId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error handling",
+      "item": [
+        {
+          "name": "Invalid ID (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid ID rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/not-a-valid-id"
+          }
+        },
+        {
+          "name": "Missing alert (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Missing alert', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts/000000000000000000000000"
+          }
+        },
+        {
+          "name": "Invalid body (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Validation details returned', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().error.details.length).to.be.above(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{alertBaseUrl}}/alerts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"x\",\n  \"severity\": \"urgent\",\n  \"status\": \"resolved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Invalid filter (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Bad query rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{alertBaseUrl}}/alerts?severity=urgent&limit=500"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -171,6 +171,10 @@ If you see **400**, check your JSON and dates. **409** means that code is alread
 
 MongoDB database: `techsolde_promotions`. Collections: `promotions` and `coupons`. To view the saved records, connect MongoDB Compass to `mongodb://127.0.0.1:27017`.
 
+## Alert Service (Alert Intelligence Center)
+
+`backend/alert-service/` is a separate Express + MongoDB service (port **5004**, database `techsolde_alerts`) that reads promotions and coupons through the Promotion Service API, detects conditions that need attention (expiring promotions/coupons, coupons near their usage limit, unusually high discounts, expired-but-active promotions) and lets the admin manage them on the dashboard's **Alerts** page. Start it in a third terminal with `cd backendlert-service; npm run dev`. Full guide, demo scenario and Postman collection: [backend/alert-service/README.md](./backend/alert-service/README.md).
+
 ## Project map: folders and important files
 
 ### Backend — `backend/promotion-service/`

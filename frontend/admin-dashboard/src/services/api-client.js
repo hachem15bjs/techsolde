@@ -9,9 +9,9 @@ export function getServiceApiClient(service) {
 
 export const promotionApi = getServiceApiClient('promotions');
 
-export function getApiErrorMessage(error) {
+export function getApiErrorMessage(error, serviceName = 'Promotion Service') {
   if (error.response?.data?.error?.message) return error.response.data.error.message;
   if (error.code === 'ECONNABORTED') return 'The request timed out. Please try again.';
-  if (!error.response) return 'Cannot reach the Promotion Service. Check that it is running.';
+  if (!error.response) return `Cannot reach the ${serviceName}. Check that it is running.`;
   return 'Something went wrong. Please try again.';
 }

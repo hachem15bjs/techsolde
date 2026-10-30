@@ -1,6 +1,6 @@
 import {
   Bell, Boxes, ChartNoAxesCombined, ChevronLeft, CreditCard, Grid2X2, Layers3, Megaphone,
-  MessageSquareText, Package, Settings, ShoppingBag, TicketPercent, Users, X
+  MessageSquareText, Package, Settings, ShoppingBag, Siren, TicketPercent, Users, X
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ const navigation = [
   { label: 'Categories', path: '/categories', icon: Layers3 },
   { label: 'Promotions', path: '/promotions', icon: Megaphone },
   { label: 'Coupons', path: '/coupons', icon: TicketPercent },
+  { label: 'Alerts', path: '/alerts', icon: Siren },
   { label: 'Orders', path: '/orders', icon: ShoppingBag },
   { label: 'Payments', path: '/payments', icon: CreditCard },
   { label: 'Notifications', path: '/notifications', icon: Bell },
@@ -45,7 +46,7 @@ export default function Sidebar({ open, onClose, collapsed, onToggleCollapsed })
               <Icon size={18} strokeWidth={1.8} />
               <span>{label}</span>
               {active && <span className="nav-dot" />}
-              {!['/', '/promotions', '/coupons'].includes(path) && <span className="coming-dot" />}
+              {!['/', '/promotions', '/coupons', '/alerts'].includes(path) && <span className="coming-dot" />}
             </NavLink>
           ))}
         </nav>
